@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_voice_assistant/feature_box.dart';
 import 'package:flutter_voice_assistant/pallete.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -9,6 +11,51 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final speechToText = SpeechToText();
+  String lastWords = '';
+
+  @override
+  void initState() {
+    super.initState();
+    initSpeechToText();
+  }
+
+  Future<void> initSpeechToText() async {
+    await speechToText.initialize();
+    setState(() {
+      
+    });
+  }
+
+   /// Each time to start a speech recognition session
+  Future<void> startListening() async {
+    await speechToText.listen(onResult: onSpeechResult);
+    setState(() {});
+  }
+
+  /// Manually stop the active speech recognition session
+  /// Note that there are also timeouts that each platform enforces
+  /// and the SpeechToText plugin supports setting timeouts on the
+  /// listen method.
+  Future<void> stopListening() async {
+    await speechToText.stop();
+    setState(() {});
+  }
+
+  /// This is the callback that the SpeechToText plugin calls when
+  /// the platform returns recognized words.
+  void onSpeechResult(SpeechRecognitionResult result) {
+    setState(() {
+      lastWords = result.recognizedWords;
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    speechToText.stop();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,12 +123,12 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             Container(
-              padding: EdgeInsets.all(10),
+              padding: const EdgeInsets.all(10),
               margin: const EdgeInsets.only(top: 10,left:22),
               alignment: Alignment.centerLeft,
               child: const Text(
                 'Here are few features!',
-                style: const TextStyle(
+                style:  TextStyle(
                   fontFamily: 'Cera Pro',
                   color: Pallete.mainFontColor,
                   fontSize: 20,
@@ -90,7 +137,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             //Suggestions/Features Lists
-            Column(
+          const Column(
               children: [
              FeatureBox(
                   color: Pallete.firstSuggestionBoxColor,
@@ -116,8 +163,17 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: (){},
-        icon: Icon(Icons.mic),
+        backgroundColor: Pallete.firstSuggestionBoxColor,
+        onPressed: () async {
+          if(await speechToText.hasPermission && speechToText.isNotListening){
+            await startListening();
+          } else if(speechToText.isListening){
+            await stopListening();
+          } else{
+            initState();
+          }
+        },
+        child: const Icon(Icons.mic),
       ),
     );
   }
